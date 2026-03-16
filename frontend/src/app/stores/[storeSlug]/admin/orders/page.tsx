@@ -2,10 +2,12 @@
 
 import { motion } from 'framer-motion';
 import { Search, Filter, Eye } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { ordersAPI } from '@/services/api';
 
 interface Order {
-  id: string;
+  id: string | number;
   customer: string;
   email: string;
   amount: number;
@@ -14,8 +16,7 @@ interface Order {
   items: number;
 }
 
-export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([
+const DEMO_ORDERS: Order[] = [
     {
       id: '#ORD-001',
       customer: 'John Doe',
@@ -61,10 +62,37 @@ export default function OrdersPage() {
       date: '2024-03-11',
       items: 1,
     },
-  ]);
+  ];
 
+export default function OrdersPage() {
+  const params = useParams();
+  const storeSlug = params.storeSlug as string;
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  useEffect(() => {
+    loadOrders();
+  }, [storeSlug]);
+
+  const loadOrders = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await ordersAPI.list(storeSlug);
+
+    if (result.error) {
+      setError(result.error);
+      setOrders(DEMO_ORDERS);
+    } else if (result.data?.items) {
+      setOrders(result.data.items);
+    } else {
+      setOrders(DEMO_ORDERS);
+    }
+    setLoading(false);
+  };
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -91,14 +119,22 @@ export default function OrdersPage() {
     }
   };
 
-  const updateOrderStatus = (id: string, newStatus: string) => {
-    setOrders(
-      orders.map((order) =>
-        order.id === id
-          ? { ...order, status: newStatus as any }
-          : order
-      )
-    );
+  const updateOrderStatus = async (id: string | number, newStatus: string) => {
+    setLoading(true);
+    const result = await ordersAPI.updateStatus(storeSlug, id.toString(), newStatus);
+
+    if (result.error) {
+      setError(result.error);
+      // Fallback to local update
+      setOrders(
+        orders.map((order) =>
+          order.id === id ? { ...order, status: newStatus as any } : order
+        )
+      );
+    } else {
+      loadOrders();
+    }
+    setLoading(false);
   };
 
   return (
@@ -113,6 +149,28 @@ export default function OrdersPage() {
           Manage and track all customer orders
         </p>
       </motion.div>
+
+      {/* Error Alert */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm"
+        >
+          Loading orders...
+        </motion.div>
+      )}
 
       {/* Stats Row */}
       <motion.div

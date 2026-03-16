@@ -2,13 +2,20 @@
 
 import { motion } from 'framer-motion';
 import { Save, Globe, Palette, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { storeSettingsAPI } from '@/services/api';
 
 export default function SettingsPage() {
+  const params = useParams();
+  const storeSlug = params.storeSlug as string;
+
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [settings, setSettings] = useState({
     storeName: 'TechGear Store',
@@ -22,6 +29,33 @@ export default function SettingsPage() {
     shippingCost: '10',
   });
 
+  useEffect(() => {
+    loadSettings();
+  }, [storeSlug]);
+
+  const loadSettings = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await storeSettingsAPI.get(storeSlug);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.data) {
+      setSettings({
+        storeName: result.data.name || settings.storeName,
+        storeDescription: result.data.description || settings.storeDescription,
+        storeEmail: result.data.email || settings.storeEmail,
+        storePhone: result.data.phone || settings.storePhone,
+        primaryColor: result.data.primary_color || settings.primaryColor,
+        secondaryColor: result.data.secondary_color || settings.secondaryColor,
+        currency: result.data.currency || settings.currency,
+        taxRate: result.data.tax_rate || settings.taxRate,
+        shippingCost: result.data.shipping_cost || settings.shippingCost,
+      });
+    }
+    setLoading(false);
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setSettings((prev) => ({
       ...prev,
@@ -31,11 +65,29 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaveSuccess(true);
+    setError(null);
+
+    const payload = {
+      name: settings.storeName,
+      description: settings.storeDescription,
+      email: settings.storeEmail,
+      phone: settings.storePhone,
+      primary_color: settings.primaryColor,
+      secondary_color: settings.secondaryColor,
+      currency: settings.currency,
+      tax_rate: parseFloat(settings.taxRate),
+      shipping_cost: parseFloat(settings.shippingCost),
+    };
+
+    const result = await storeSettingsAPI.update(storeSlug, payload);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    }
     setIsSaving(false);
-    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   const tabs = [
@@ -54,6 +106,28 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Store Settings</h1>
         <p className="text-gray-600">Manage your store configuration and preferences</p>
       </motion.div>
+
+      {/* Error Alert */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm"
+        >
+          Loading settings...
+        </motion.div>
+      )}
 
       {/* Tabs */}
       <motion.div

@@ -2,11 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { productsAPI } from '@/services/api';
 
 interface Product {
-  id: string;
+  id: string | number;
   name: string;
   price: number;
   stock: number;
@@ -14,42 +16,48 @@ interface Product {
   status: 'active' | 'inactive';
 }
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: '1',
-      name: 'Premium Wireless Headphones',
-      price: 199.99,
-      stock: 45,
-      category: 'Electronics',
-      status: 'active',
-    },
-    {
-      id: '2',
-      name: 'Organic Cotton T-Shirt',
-      price: 29.99,
-      stock: 120,
-      category: 'Fashion',
-      status: 'active',
-    },
-    {
-      id: '3',
-      name: 'Luxury Skincare Set',
-      price: 89.99,
-      stock: 0,
-      category: 'Beauty',
-      status: 'inactive',
-    },
-    {
-      id: '4',
-      name: 'Modern Desk Lamp',
-      price: 49.99,
-      stock: 78,
-      category: 'Home',
-      status: 'active',
-    },
-  ]);
+const DEMO_PRODUCTS: Product[] = [
+  {
+    id: '1',
+    name: 'Premium Wireless Headphones',
+    price: 199.99,
+    stock: 45,
+    category: 'Electronics',
+    status: 'active',
+  },
+  {
+    id: '2',
+    name: 'Organic Cotton T-Shirt',
+    price: 29.99,
+    stock: 120,
+    category: 'Fashion',
+    status: 'active',
+  },
+  {
+    id: '3',
+    name: 'Luxury Skincare Set',
+    price: 89.99,
+    stock: 0,
+    category: 'Beauty',
+    status: 'inactive',
+  },
+  {
+    id: '4',
+    name: 'Modern Desk Lamp',
+    price: 49.99,
+    stock: 78,
+    category: 'Home',
+    status: 'active',
+  },
+];
 
+export default function ProductsPage() {
+  const params = useParams();
+  const storeSlug = params.storeSlug as string;
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,28 +67,74 @@ export default function ProductsPage() {
     category: '',
   });
 
+  useEffect(() => {
+    loadProducts();
+  }, [storeSlug]);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await productsAPI.list(storeSlug);
+
+    if (result.error) {
+      setError(result.error);
+      setProducts(DEMO_PRODUCTS);
+    } else if (result.data?.items) {
+      setProducts(result.data.items);
+    } else {
+      setProducts(DEMO_PRODUCTS);
+    }
+    setLoading(false);
+  };
+
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (formData.name && formData.price && formData.stock && formData.category) {
-      const newProduct: Product = {
-        id: Date.now().toString(),
+      setLoading(true);
+      const payload = {
         name: formData.name,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
-        category: formData.category,
-        status: 'active',
+        category_id: parseInt(formData.category) || null,
+        is_active: true,
       };
-      setProducts([...products, newProduct]);
+
+      const result = await productsAPI.create(storeSlug, payload);
+
+      if (result.error) {
+        setError(result.error);
+        // Fallback: add to local state
+        const newProduct: Product = {
+          ...payload,
+          id: Date.now().toString(),
+          status: 'active' as const,
+          category: formData.category,
+        };
+        setProducts([...products, newProduct]);
+      } else {
+        loadProducts();
+      }
+
       setFormData({ name: '', price: '', stock: '', category: '' });
       setShowModal(false);
+      setLoading(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    setProducts(products.filter((p) => p.id !== id));
+  const handleDelete = async (id: string | number) => {
+    setLoading(true);
+    const result = await productsAPI.delete(storeSlug, id.toString());
+
+    if (result.error) {
+      setError(result.error);
+      setProducts(products.filter((p) => p.id !== id));
+    } else {
+      loadProducts();
+    }
+    setLoading(false);
   };
 
   return (
@@ -105,6 +159,28 @@ export default function ProductsPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Error Alert */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm"
+        >
+          Loading products...
+        </motion.div>
+      )}
 
       {/* Search Bar */}
       <motion.div

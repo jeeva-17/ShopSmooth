@@ -2,10 +2,12 @@
 
 import { motion } from 'framer-motion';
 import { Search, Mail, MapPin, ShoppingCart } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { customersAPI } from '@/services/api';
 
 interface Customer {
-  id: string;
+  id: string | number;
   name: string;
   email: string;
   phone: string;
@@ -16,8 +18,7 @@ interface Customer {
   status: 'active' | 'inactive';
 }
 
-export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([
+const DEMO_CUSTOMERS: Customer[] = [
     {
       id: '1',
       name: 'John Doe',
@@ -73,9 +74,36 @@ export default function CustomersPage() {
       joinDate: '2024-02-28',
       status: 'inactive',
     },
-  ]);
+  ];
 
+export default function CustomersPage() {
+  const params = useParams();
+  const storeSlug = params.storeSlug as string;
+
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    loadCustomers();
+  }, [storeSlug]);
+
+  const loadCustomers = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await customersAPI.list(storeSlug);
+
+    if (result.error) {
+      setError(result.error);
+      setCustomers(DEMO_CUSTOMERS);
+    } else if (result.data?.items) {
+      setCustomers(result.data.items);
+    } else {
+      setCustomers(DEMO_CUSTOMERS);
+    }
+    setLoading(false);
+  };
 
   const filteredCustomers = customers.filter((customer) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,6 +133,28 @@ export default function CustomersPage() {
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Customers</h1>
         <p className="text-gray-600">View and manage your customer base</p>
       </motion.div>
+
+      {/* Error Alert */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm"
+        >
+          Loading customers...
+        </motion.div>
+      )}
 
       {/* Stats */}
       <motion.div
