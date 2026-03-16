@@ -1,28 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BarChart3, ShoppingCart, Users, TrendingUp, DollarSign, Package } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-
-interface StatCard {
-  label: string;
-  value: string;
-  change: string;
-  icon: any;
-  trend: 'up' | 'down';
-}
+import { BarChart3, ShoppingCart, Users, DollarSign, Package } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const params = useParams();
-  const storeSlug = params.storeSlug as string;
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 500);
-  }, []);
-
-  const stats: StatCard[] = [
+  const stats = [
     {
       label: 'Total Revenue',
       value: '$12,450',
@@ -57,28 +39,7 @@ export default function AdminDashboard() {
     { id: '#1001', customer: 'John Doe', amount: '$299.99', status: 'Delivered', date: 'Today' },
     { id: '#1002', customer: 'Jane Smith', amount: '$149.99', status: 'Shipped', date: 'Today' },
     { id: '#1003', customer: 'Bob Wilson', amount: '$599.99', status: 'Processing', date: 'Yesterday' },
-    { id: '#1004', customer: 'Alice Brown', amount: '$99.99', status: 'Delivered', date: 'Yesterday' },
   ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5 },
-    },
-  };
 
   return (
     <motion.div
@@ -86,44 +47,35 @@ export default function AdminDashboard() {
       animate={{ opacity: 1 }}
       className="space-y-8"
     >
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Welcome back! Here's your store performance.</p>
+        <p className="text-gray-600">Welcome! Here's your store performance.</p>
       </motion.div>
 
-      {/* Stats Grid */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-      >
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <motion.div
               key={index}
-              variants={itemVariants}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
               whileHover={{ y: -4 }}
               className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all"
             >
               <div className="flex items-start justify-between mb-4">
                 <Icon className="w-8 h-8 text-indigo-600" />
-                <span className={`text-sm font-medium ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.change}
-                </span>
+                <span className="text-sm font-medium text-green-600">{stat.change}</span>
               </div>
               <p className="text-gray-600 text-sm mb-2">{stat.label}</p>
               <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
             </motion.div>
           );
         })}
-      </motion.div>
+      </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -144,7 +96,6 @@ export default function AdminDashboard() {
           </div>
         </motion.div>
 
-        {/* Top Products */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -158,13 +109,7 @@ export default function AdminDashboard() {
               { name: 'Wireless Charger', sales: 128 },
               { name: 'Phone Case', sales: 112 },
             ].map((product, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + i * 0.1 }}
-                className="flex items-center justify-between"
-              >
+              <div key={i} className="flex items-center justify-between">
                 <p className="text-gray-700 font-medium">{product.name}</p>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-gray-200 rounded-full h-2">
@@ -177,26 +122,19 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-sm text-gray-600 w-12 text-right">{product.sales}</span>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </motion.div>
       </div>
 
-      {/* Recent Orders */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="bg-white rounded-xl border border-gray-200 p-6"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Recent Orders</h2>
-          <a href={`/stores/${storeSlug}/admin/orders`} className="text-indigo-600 hover:text-indigo-700 font-medium">
-            View All
-          </a>
-        </div>
-
+        <h2 className="text-lg font-bold text-gray-900 mb-6">Recent Orders</h2>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -210,13 +148,7 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {recentOrders.map((order, i) => (
-                <motion.tr
-                  key={i}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 + i * 0.05 }}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition"
-                >
+                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition">
                   <td className="py-3 px-4 text-sm font-medium text-gray-900">{order.id}</td>
                   <td className="py-3 px-4 text-sm text-gray-700">{order.customer}</td>
                   <td className="py-3 px-4 text-sm font-semibold text-gray-900">{order.amount}</td>
@@ -230,7 +162,7 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">{order.date}</td>
-                </motion.tr>
+                </tr>
               ))}
             </tbody>
           </table>
